@@ -28,9 +28,9 @@
 		db.get = newDbFunctionGenerator(db.get);
 		db.remove = newDbFunctionGenerator(db.remove);
 		db.getList = newDbFunctionGenerator(db.getList);
+		db.removeAll = newDbFunctionGenerator(db.removeAll);
 		db.getExpiration = newDbFunctionGenerator(db.getExpiration);
 		db.updateExpiration = newDbFunctionGenerator(db.updateExpiration);
-		db.removeAll = newDbFunctionGenerator(db.removeAll);
 		db.setFromRemote = function(url, key, expires, onSuccess, onFailure) {
 			var dfd = new $.Deferred();
 
@@ -135,19 +135,79 @@
     };
 }());
 
-
-function asseert(val1, val2){
-	if (val === val2){
-		console.log("val1 is equal to val2");
-	}
-	else {
-		console.log("expected " + val1 + " but found " + val2);
-	}
-}
-
-$.when(appAPI.db.async.set("", 123))
-appAPI.db.async.set("key1", 123, appAPI.time.minutesFromNow(3)).then(function (){
-	appAPI.db.async.get("key1").then(function (res){
-		assert(res, 123);
+///////////////////////////////////////////////////////////////
+// ASYNC DB TEST
+///////////////////////////////////////////////////////////////
+// Set - Get Test:
+appAPI.db.async.set('key', 123).then(function (){
+	appAPI.db.async.get('key', 123).then(function (res){
+		console.log("Set - Get Result ", res === 123);
 	});
+});
+
+// Remove Test:
+appAPI.db.async.set('key', 123).then(function (){
+	appAPI.db.async.remove('key').then(function (){
+		appAPI.db.async.get('key', 123).then(function (res){
+			console.log("Remove test result: ", appAPI.utils.isDefined(res));
+		});
+	});
+});
+
+// GetList Test:
+$.when(appAPI.db.async.set('key1', 123), appAPI.db.async.set('key2', 456)).then(function (){
+	appAPI.db.async.getList().then(function (result){
+		console.log("GetList result ", result);
+	});
+});
+
+// RemoveAll Test:
+$.when(appAPI.db.async.set('key1', 123), appAPI.db.async.set('key2', 456)).then(function (){
+	appAPI.db.async.removeAll().then(function (){
+		appAPI.db.async.getList().then(function (result){
+			console.log("RemoveAll result ", result);
+		});
+	});
+});
+
+// GetExpiration - UpdateExpiration RemoveAll Test:
+appAPI.db.async.set('key', 123, appAPI.time.hoursFromNow(3)).then(function (){
+	appAPI.db.async.getExpiration().then(function (res){
+		console.log("GetExpiration, before: ", res);
+		appAPI.db.async.updateExpiration(appAPI.time.minutesFromNow(3)).then(function (){
+			appAPI.db.async.getExpiration().then(function (res){
+				console.log("GetExpiration, after: ", res);
+			});
+		});
+	});
+});
+
+///////////////////////////////////////////////////////////////
+// REQUEST TEST
+///////////////////////////////////////////////////////////////
+// Get Test
+var getData = {
+	url: 'http://google.com',
+	additionalRequestHeaders: {}
+};
+appAPI.request.get(getData)
+	.done(function (response, additionalInfo){
+		console.log("Get request test result: ", response.length, additionalInfo);
+	})
+	.fail(function (httpCode){
+		console.log("Get request test result(fail): ", httpCode);
+});
+
+// Post Test
+var postData = {
+	url: 'http://infinite-plains-4163.herokuapp.com',
+    postData: {hello: "world"},
+    additionalRequestHeaders: { foo: "bar"}
+};
+appAPI.request.post(postData)
+	.done(function (response, additionalInfo){
+		console.log("Post request test result: ", response.length, additionalInfo);
+	})
+	.fail(function (httpCode){
+		console.log("Post request test result(fail): ", httpCode);
 });
