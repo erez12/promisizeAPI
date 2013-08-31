@@ -7,9 +7,17 @@
 	function newDbFunctionGenerator(oldDbFunction) {
 		return function () {
 			var dfd = new $.Deferred();
-			var args = Array.prototype.slice.call(arguments);
+			var args = Array.prototype.slice.call(arguments.length - 1);
 
-			args.push(dfd.resolve);
+			// Save a ref to the callback if it was passed.
+			// Internally, API also uses these functions so we MUST call callback later
+			var callback = appAPI.utils.isFunction(arguments[arguments.length - 1]) ? arguments[arguments.length - 1] : noOpp;
+
+			args.push(function (result){
+				callback(result);
+				dfd.resolve(result);
+			});
+			// TODO - might need to call the function with setImmediate (to support IE)
 			oldDbFunction.apply(null, args);
 
 			return dfd.promise();
@@ -19,6 +27,29 @@
 		db.set = newDbFunctionGenerator(db.set);
 		db.get = newDbFunctionGenerator(db.get);
 		db.remove = newDbFunctionGenerator(db.remove);
+		db.getList = newDbFunctionGenerator(db.getList);
+		db.getExpiration = newDbFunctionGenerator(db.getExpiration);
+		db.updateExpiration = newDbFunctionGenerator(db.updateExpiration);
+		db.removeAll = newDbFunctionGenerator(db.removeAll);
+		db.setFromRemote = function(url, key, expires, onSuccess, onFailure) {
+			var dfd = new $.Deferred();
+
+			var oldSetFromRemote = db.setFromRemote;
+			// Internally, API also uses these functions so we MUST call callbacks later
+			onSuccess = onSuccess || noOpp;
+			onFailure = onFailure || noOpp;
+			oldDbFunction(url, key,	expires,
+				function (result){
+					onSuccess(result);
+					dfd.resolve(result);
+				},
+				function (result){
+					onFailure(result);
+					dfd.reject(result);
+			});
+
+			return dfd.promise();
+		};
 	}(appAPI.db.async));
 
 	///////////////////////////////////////////////////////////////
