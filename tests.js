@@ -2,43 +2,47 @@
 // ASYNC DB TEST
 ///////////////////////////////////////////////////////////////
 // Set - Get Test:
-appAPI.db.async.set('key', 123).then(function (){
-	appAPI.db.async.get('key', 123).then(function (res){
+appAPI.db.async.set('key', 123, appAPI.time.hoursFromNow(3)).then(function (){
+	appAPI.db.async.get('key').then(function (res){
 		console.log("Set - Get Result ", res === 123);
 	});
 });
 
 // Remove Test:
-appAPI.db.async.set('key', 123).then(function (){
+appAPI.db.async.set('key', 123, appAPI.time.hoursFromNow(3)).then(function (){
 	appAPI.db.async.remove('key').then(function (){
-		appAPI.db.async.get('key', 123).then(function (res){
-			console.log("Remove test result: ", appAPI.utils.isDefined(res));
+		appAPI.db.async.get('key').then(function (res){
+			console.log("Remove test result: ", !appAPI.utils.isDefined(res));
 		});
 	});
 });
 
 // GetList Test:
-$.when(appAPI.db.async.set('key1', 123), appAPI.db.async.set('key2', 456)).then(function (){
-	appAPI.db.async.getList().then(function (result){
-		console.log("GetList result ", result);
-	});
-});
-
-// RemoveAll Test:
-$.when(appAPI.db.async.set('key1', 123), appAPI.db.async.set('key2', 456)).then(function (){
-	appAPI.db.async.removeAll().then(function (){
+appAPI.ready(function ($){
+	$.when(appAPI.db.async.set('key1', 123, appAPI.time.hoursFromNow(3)), appAPI.db.async.set('key2', 456, appAPI.time.hoursFromNow(3))).then(function (){
 		appAPI.db.async.getList().then(function (result){
-			console.log("RemoveAll result ", result);
+			console.log("GetList result ", result);
 		});
 	});
 });
 
+
+// RemoveAll Test:
+appAPI.ready(function ($){
+	$.when(appAPI.db.async.set('key1', 123, appAPI.time.hoursFromNow(3)), appAPI.db.async.set('key2', 456, appAPI.time.hoursFromNow(3))).then(function (){
+		appAPI.db.async.removeAll().then(function (){
+			appAPI.db.async.getList().then(function (result){
+				console.log("RemoveAll result ", result);
+			});
+		});
+	});
+});
 // GetExpiration - UpdateExpiration RemoveAll Test:
 appAPI.db.async.set('key', 123, appAPI.time.hoursFromNow(3)).then(function (){
-	appAPI.db.async.getExpiration().then(function (res){
+	appAPI.db.async.getExpiration('key').then(function (res){
 		console.log("GetExpiration, before: ", res);
-		appAPI.db.async.updateExpiration(appAPI.time.minutesFromNow(3)).then(function (){
-			appAPI.db.async.getExpiration().then(function (res){
+		appAPI.db.async.updateExpiration('key', appAPI.time.minutesFromNow(3)).then(function (){
+			appAPI.db.async.getExpiration('key').then(function (res){
 				console.log("GetExpiration, after: ", res);
 			});
 		});
@@ -69,7 +73,7 @@ var postData = {
 };
 appAPI.request.post(postData)
 	.done(function (response, additionalInfo){
-		console.log("Post request test result: ", response.length, additionalInfo);
+		console.log("Post request test result: ", appAPI.JSON.parse(response), additionalInfo);
 	})
 	.fail(function (httpCode){
 		console.log("Post request test result(fail): ", httpCode);
